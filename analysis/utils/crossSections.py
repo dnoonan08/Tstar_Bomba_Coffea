@@ -46,6 +46,17 @@ crossSections = {
     "TstarTstar_TGluTGlu_M1500" :  0.00677,
     "TstarTstar_TGluTGlu_M1600" :  0.00359,
     
+    "TstarTstar_TGammaTGamma_M700"  :  4.92,
+    "TstarTstar_TGammaTGamma_M800"  :  1.68,
+    "TstarTstar_TGammaTGamma_M900"  :  0.636,
+    "TstarTstar_TGammaTGamma_M1000" :  0.262,
+    "TstarTstar_TGammaTGamma_M1100" :  0.116,
+    "TstarTstar_TGammaTGamma_M1200" :  0.0537,
+    "TstarTstar_TGammaTGamma_M1300" :  0.0261,
+    "TstarTstar_TGammaTGamma_M1400" :  0.0131,
+    "TstarTstar_TGammaTGamma_M1500" :  0.00677,
+    "TstarTstar_TGammaTGamma_M1600" :  0.00359,
+
     'TTGamma_Dilepton'    : 1.495*1.4852,
     'TTGamma_SingleLept'  : 5.056*1.4852,
     'TTGamma_Hadronic'    : 4.149*1.4852,
