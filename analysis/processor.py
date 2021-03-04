@@ -23,6 +23,7 @@ from .utils.PUReweight import getPileupReweight
 from .utils.ElectronScaleFactors import ElectronScaleFactors
 from .utils.MuonScaleFactors import MuonScaleFactors
 from .utils.BtagWeights import BtagWeights
+from .utils.PhotonScaleFactors import PhotonScaleFactors
 
 import time
 import psutil
@@ -59,6 +60,9 @@ class TstarSelector(processor.ProcessorABC):
         lep_axis = hist.Bin('lepFlavor','Lepton Flavor',2,0,2)
         phoHighPt_axis = hist.Bin('phopt','$p_{T}(\gamma)$',np.array([20,50,100,150,200,250,300,500,1000,1500]))
 
+        lepPhoMass_axis = hist.Bin('mass','$m(\ell, \gamma)$',200,0,200)
+        jetCat_axis = hist.Cat('jetCat','jetCategory')
+
         cut_axis = hist.Cat('cut','Cut')
 
         self._accumulator = processor.dict_accumulator({
@@ -75,22 +79,12 @@ class TstarSelector(processor.ProcessorABC):
             'jetPt_PhoSel'  : hist.Hist("Counts", dataset_axis, lep_axis, jetPt_axis, systematic_axis),
             'jetEta_PhoSel' : hist.Hist("Counts", dataset_axis, lep_axis, jetEta_axis, systematic_axis),
 
+            'lepPhoMass'  : hist.Hist("Counts", dataset_axis, lep_axis, lepPhoMass_axis, jetCat_axis, phoHighPt_axis, systematic_axis),
 
-#             'tt_WMass': hist.Hist("Counts", dataset_axis, lep_axis, mW_axis, systematic_axis),
             'tt_topHadMass': hist.Hist("Counts", dataset_axis, lep_axis, mTop_axis, systematic_axis),
             'tt_topLepMass': hist.Hist("Counts", dataset_axis, lep_axis, mTop_axis, systematic_axis),
             'tt_chi2': hist.Hist("Counts", dataset_axis, lep_axis, chi2_axis, systematic_axis),
 
-#             'tgtg_topHadMass': hist.Hist("Counts", dataset_axis, lep_axis, mTop_axis, systematic_axis),
-#             'tgtg_topLepMass': hist.Hist("Counts", dataset_axis, lep_axis, mTop_axis, systematic_axis),
-#             'tgtg_WMass': hist.Hist("Counts", dataset_axis, lep_axis, mW_axis, systematic_axis),
-#             'tgtg_tstarHadMass': hist.Hist("Counts", dataset_axis, lep_axis, mTstar_axis, systematic_axis),
-#             'tgtg_tstarLepMass': hist.Hist("Counts", dataset_axis, lep_axis, mTstar_axis, systematic_axis),
-#             'tgtg_chi2': hist.Hist("Counts", dataset_axis, lep_axis, chi2_axis, systematic_axis),
-
-#             'tgty_WMass': hist.Hist("Counts", dataset_axis, lep_axis, mW_axis, systematic_axis),
-#             'tgty_topHadMass': hist.Hist("Counts", dataset_axis, lep_axis, mTop_axis, systematic_axis),
-#             'tgty_topLepMass': hist.Hist("Counts", dataset_axis, lep_axis, mTop_axis, systematic_axis),
             'tgty_tstarMass': hist.Hist("Counts", dataset_axis, lep_axis, mTstar_axis, systematic_axis, phoHighPt_axis),
             'tgty_tstarHadMass': hist.Hist("Counts", dataset_axis, lep_axis, mTstar_axis, systematic_axis, phoHighPt_axis),
             'tgty_tstarLepMass': hist.Hist("Counts", dataset_axis, lep_axis, mTstar_axis, systematic_axis, phoHighPt_axis),
@@ -115,6 +109,7 @@ class TstarSelector(processor.ProcessorABC):
         self.bCalc = BtagWeights()
         self.eleSF = ElectronScaleFactors()
         self.muSF  = MuonScaleFactors()
+        self.phoSF = PhotonScaleFactors()
         
     @property
     def accumulator(self):
@@ -195,6 +190,7 @@ class TstarSelector(processor.ProcessorABC):
 
         selection.add('lepton', muon_eventSelection | ele_eventSelection)
         
+        selection.add('2jet',(ak.num(tightJets)>=2))
         selection.add('3jet',(ak.num(tightJets)>=3))
         selection.add('4jet',(ak.num(tightJets)>=4))
         selection.add('5jet',(ak.num(tightJets)>=5))
@@ -244,6 +240,9 @@ class TstarSelector(processor.ProcessorABC):
 
             btagsWeight = self.bCalc.getBtagWeights(tightJets, btag, year, dataset)
             weightCollection.add('btagSF',weight=btagsWeight[0], weightUp=btagsWeight[1], weightDown=btagsWeight[2])
+
+            phoWeight = self.phoSF.getPhoScaleFactors(tightPhotons, year, 'total')
+            weightCollection.add('phoSF',weight=phoWeight[0], weightUp=phoWeight[1], weightDown=phoWeight[2])
 
 
             if ak.all(ak.num(events.PSWeight)==4):
@@ -430,6 +429,24 @@ class TstarSelector(processor.ProcessorABC):
             output['phoEta_3j4j'].fill(dataset=dataset, lepFlavor=lepFlavor[evtSel], weight=weights[syst][evtSel],
                                        eta = ak.flatten(tightPhotons[evtSel,:1].eta),
                                        systematic=syst)
+
+            #separate jet categories
+            jetCatCuts = {'2j0t':(ak.num(tightJets)==2) & (ak.num(tightJets[btag])==0),
+                          '3j0t':(ak.num(tightJets)==3) & (ak.num(tightJets[btag])==0),
+                          '4j0t':(ak.num(tightJets)==4) & (ak.num(tightJets[btag])==0),
+                          '5j0t':(ak.num(tightJets)>=5) & (ak.num(tightJets[btag])==0),
+                          '2j1t':(ak.num(tightJets)==2) & (ak.num(tightJets[btag])>=1),
+                          '3j1t':(ak.num(tightJets)==3) & (ak.num(tightJets[btag])>=1),
+                          '4j1t':(ak.num(tightJets)==4) & (ak.num(tightJets[btag])>=1),
+                          '5j1t':(ak.num(tightJets)>=5) & (ak.num(tightJets[btag])>=1)}
+            for jetCat in jetCatCuts:
+                evtSel = selection.all(*('overlap','lepton','met','photon')) & jetCatCuts[jetCat]
+                if ak.sum(evtSel)==0: continue
+                output['lepPhoMass'].fill(dataset=dataset, lepFlavor = lepFlavor[evtSel], weight=weights[syst][evtSel], systematic=syst, 
+                                          jetCat=jetCat,
+                                          mass = ak.flatten( (tightLep[evtSel] + tightPhotons[evtSel]).mass), 
+                                          phopt = ak.flatten( tightPhotons[evtSel].pt))
+
             
         for i in range(len(cutList)):
             cut = cutList[i]
