@@ -468,13 +468,11 @@ def getPileupReweight(nPUTrue, mcDistribution, dataset, year):
     dataDistDown = dataDistributions[year]['Down']
 
     #avoid divide by 0 warnings in cases that will not matter
-    dataDistNom[mcPUdist==0] = 1.
-    dataDistUp[mcPUdist==0] = 1.
-    dataDistDown[mcPUdist==0] = 1.
+    mcPUdist[mcPUdist==0] = 1.
 
-    puNominal = dense_lookup.dense_lookup(mcPUdist/dataDistNom,np.arange(200))
-    puUp = dense_lookup.dense_lookup(mcPUdist/dataDistUp,np.arange(200))
-    puDown = dense_lookup.dense_lookup(mcPUdist/dataDistDown,np.arange(200))
+    puNominal = dense_lookup.dense_lookup(dataDistNom/mcPUdist,np.arange(200))
+    puUp = dense_lookup.dense_lookup(dataDistUp/mcPUdist,np.arange(200))
+    puDown = dense_lookup.dense_lookup(dataDistDown/mcPUdist,np.arange(200))
 
     return puNominal(nPUTrue), puUp(nPUTrue), puDown(nPUTrue)
 

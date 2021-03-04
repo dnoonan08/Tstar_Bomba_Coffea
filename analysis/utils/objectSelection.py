@@ -2,7 +2,7 @@ import awkward as ak
 
 def selectMuons(muons):
     muonSelectTight = ((muons.pt>=30) & 
-                       (abs(muons.eta)<=2.1) & 
+                       (abs(muons.eta)<=2.4) & 
                        (muons.tightId) & 
                        (muons.pfRelIso04_all < 0.15)
                       )
@@ -18,9 +18,10 @@ def selectMuons(muons):
 
 
 
-def selectElectrons(electrons):
+def selectElectrons(electrons, photons):
     #define electron cuts
-    eleEtaGap = (abs(electrons.eta) < 1.4442) | (abs(electrons.eta) > 1.566)
+    scEta = electrons.eta + electrons.deltaEtaSC
+    eleEtaGap = (abs(scEta) < 1.4442) | (abs(scEta) > 1.566)
     elePassDXY = ((abs(electrons.eta) < 1.479) & (abs(electrons.dxy) < 0.05) |
                  (abs(electrons.eta) > 1.479)  & (abs(electrons.dxy) < 0.1)
                 )
@@ -36,10 +37,21 @@ def selectElectrons(electrons):
                            elePassDZ
                           )
 
+    vetoID = (electrons.vidNestedWPBitmap & 7) >= 1
+    for i_cut in [1,2,3,4,5,6,8,9]:
+        vetoID = vetoID & (((electrons.vidNestedWPBitmap>>(i_cut*3)) & 7) >= 1)
+
+    vetoIsoCut = ak.where(scEta<1.479, 0.198 + 0.506/electrons.pt, 0.203 + 0.963/electrons.pt)
+    phoMatch = ak.unflatten(ak.flatten(photons)[ak.flatten(electrons.photonIdxG)],ak.num(electrons))
+    phoRelIso = ak.where(electrons.photonIdxG>-1, phoMatch.pfRelIso03_all, 999)
+    looseIso = ak.where(electrons.pfRelIso03_all < phoRelIso, electrons.pfRelIso03_all, phoRelIso)
+    vetoIDIso = looseIso<vetoIsoCut
+    vetoID = vetoID & vetoIDIso
+    
     electronSelectLoose = ((electrons.pt>=15) & 
                            (abs(electrons.eta)<=2.4) & 
                            eleEtaGap &      
-                           electrons.isVeto &
+                           vetoID &
                            elePassDXY & 
                            elePassDZ & 
                            ~electronSelectTight
@@ -56,7 +68,7 @@ def selectPhotons(photons, muons, electrons):
     phoEleMask = ak.fill_none(phoEleDR > 0.4, True)
     photonSelect = ((photons.pt>20) & 
                     (abs(photons.eta) < 1.4442) &
-                    (photons.isScEtaEE | photons.isScEtaEB) &
+#                     (photons.isScEtaEE | photons.isScEtaEB) &
                     (photons.electronVeto) & 
                     ~photons.pixelSeed & 
                     phoMuMask & phoEleMask &

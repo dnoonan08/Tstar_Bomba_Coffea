@@ -39,9 +39,12 @@ fileset = {
            ('TTGamma_Dilepton',2016):[f'{eosDir}/TTGamma_Dilepton_2016_skim.root'],
            ('TTGamma_Dilepton_Pt100',2016):[f'{eosDir}/TTGamma_Dilepton_Pt100_2016_skim.root'],
            ('TTGamma_Dilepton_Pt200',2016):[f'{eosDir}/TTGamma_Dilepton_Pt200_2016_skim.root'],
+           ('TTGamma_Hadronic',2016):[f'{eosDir}/TTGamma_Hadronic_2016_skim.root'],
+
 
            ('TTbarPowheg_SingleLept',2016):[f'{eosDir}/TTbarPowheg_Semilept_2016_skim_{i}of10.root' for i in range(1,11)],
            ('TTbarPowheg_Dilepton',2016):[f'{eosDir}/TTbarPowheg_Dilepton_2016_skim_{i}of10.root' for i in range(1,11)],
+           ('TTbarPowheg_Hadronic',2016):[f'{eosDir}/TTbarPowheg_Hadronic_2016_skim_{i}of10.root' for i in range(1,11)],
 
            ('TGJets',2016):[f"{eosDir}/TGJets_2016_skim.root",f"{eosDir}/TGJets_ext1_2016_skim.root"],
 
@@ -83,18 +86,18 @@ fileset = {
 
 
 filesetData = {
-    ('Data_SingleEle_b', 2016) : [f'{eosDir}/Data_SingleEle_b_2016_skim_{i}of10.root' for i in range(10)],
-    ('Data_SingleEle_c', 2016) : [f'{eosDir}/Data_SingleEle_c_2016_skim_{i}of10.root' for i in range(10)],
-    ('Data_SingleEle_d', 2016) : [f'{eosDir}/Data_SingleEle_d_2016_skim_{i}of10.root' for i in range(10)],
-    ('Data_SingleEle_e', 2016) : [f'{eosDir}/Data_SingleEle_e_2016_skim_{i}of10.root' for i in range(10)],
-    ('Data_SingleEle_f', 2016) : [f'{eosDir}/Data_SingleEle_f_2016_skim_{i}of10.root' for i in range(10)],
-    ('Data_SingleEle_g', 2016) : [f'{eosDir}/Data_SingleEle_g_2016_skim_{i}of10.root' for i in range(10)],
-    ('Data_SingleEle_h', 2016) : [f'{eosDir}/Data_SingleEle_h_2016_skim_{i}of10.root' for i in range(10)],
-    ('Data_SingleMu_b', 2016)  : [f'{eosDir}/Data_SingleMu_b_2016_skim_{i}of10.root'  for i in range(10)],
-    ('Data_SingleMu_c', 2016)  : [f'{eosDir}/Data_SingleMu_c_2016_skim_{i}of10.root'  for i in range(10)],
-    ('Data_SingleMu_d', 2016)  : [f'{eosDir}/Data_SingleMu_d_2016_skim_{i}of10.root'  for i in range(10)],
-    ('Data_SingleMu_e', 2016)  : [f'{eosDir}/Data_SingleMu_e_2016_skim_{i}of10.root'  for i in range(10)],
-    ('Data_SingleMu_f', 2016)  : [f'{eosDir}/Data_SingleMu_f_2016_skim_{i}of10.root'  for i in range(10)],
-    ('Data_SingleMu_g', 2016)  : [f'{eosDir}/Data_SingleMu_g_2016_skim_{i}of10.root'  for i in range(10)],
-    ('Data_SingleMu_h', 2016)  : [f'{eosDir}/Data_SingleMu_h_2016_skim_{i}of10.root'  for i in range(10)],
+    ('Data_SingleEle_b', 2016) : [f'{eosDir}/Data_SingleEle_b_2016_skim_{i}of10.root' for i in range(1,11)],
+    ('Data_SingleEle_c', 2016) : [f'{eosDir}/Data_SingleEle_c_2016_skim_{i}of10.root' for i in range(1,11)],
+    ('Data_SingleEle_d', 2016) : [f'{eosDir}/Data_SingleEle_d_2016_skim_{i}of10.root' for i in range(1,11)],
+    ('Data_SingleEle_e', 2016) : [f'{eosDir}/Data_SingleEle_e_2016_skim_{i}of10.root' for i in range(1,11)],
+    ('Data_SingleEle_f', 2016) : [f'{eosDir}/Data_SingleEle_f_2016_skim_{i}of10.root' for i in range(1,11)],
+    ('Data_SingleEle_g', 2016) : [f'{eosDir}/Data_SingleEle_g_2016_skim_{i}of10.root' for i in range(1,11)],
+    ('Data_SingleEle_h', 2016) : [f'{eosDir}/Data_SingleEle_h_2016_skim_{i}of10.root' for i in range(1,11)],
+    ('Data_SingleMu_b', 2016)  : [f'{eosDir}/Data_SingleMu_b_2016_skim_{i}of10.root'  for i in range(1,11)],
+    ('Data_SingleMu_c', 2016)  : [f'{eosDir}/Data_SingleMu_c_2016_skim_{i}of10.root'  for i in range(1,11)],
+    ('Data_SingleMu_d', 2016)  : [f'{eosDir}/Data_SingleMu_d_2016_skim_{i}of10.root'  for i in range(1,11)],
+    ('Data_SingleMu_e', 2016)  : [f'{eosDir}/Data_SingleMu_e_2016_skim_{i}of10.root'  for i in range(1,11)],
+    ('Data_SingleMu_f', 2016)  : [f'{eosDir}/Data_SingleMu_f_2016_skim_{i}of10.root'  for i in range(1,11)],
+    ('Data_SingleMu_g', 2016)  : [f'{eosDir}/Data_SingleMu_g_2016_skim_{i}of10.root'  for i in range(1,11)],
+    ('Data_SingleMu_h', 2016)  : [f'{eosDir}/Data_SingleMu_h_2016_skim_{i}of10.root'  for i in range(1,11)],
 }
