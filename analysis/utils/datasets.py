@@ -51,12 +51,12 @@ fileset = {
            ('ST_s_channel',2016):[f"{eosDir}/ST_s_channel_2016_skim.root"],
            ('ST_tW_channel',2016):[f"{eosDir}/ST_tW_channel_2016_skim.root"],
            ('ST_tbarW_channel',2016):[f"{eosDir}/ST_tbarW_channel_2016_skim.root"],
-           ('ST_t_channel',2016):[f"{eosDir}/ST_t_channel_2016_skim_1of5.root",f"{eosDir}/ST_t_channel_2016_skim_2of5.root",f"{eosDir}/ST_t_channel_2016_skim_3of5.root",f"{eosDir}/ST_t_channel_2016_skim_4of5.root",f"{eosDir}/ST_t_channel_2016_skim_5of5.root"],
-           ('ST_tbar_channel',2016):[f"{eosDir}/ST_tbar_channel_2016_skim_1of5.root",f"{eosDir}/ST_tbar_channel_2016_skim_2of5.root",f"{eosDir}/ST_tbar_channel_2016_skim_3of5.root",f"{eosDir}/ST_tbar_channel_2016_skim_4of5.root",f"{eosDir}/ST_tbar_channel_2016_skim_5of5.root"],
+           ('ST_t_channel',2016):[f"{eosDir}/ST_t_channel_2016_skim_{i}of5.root" for i in range(1,6)],
+           ('ST_tbar_channel',2016):[f"{eosDir}/ST_tbar_channel_2016_skim_{i}of5.root" for i in range(1,6)],
 
     
            ('WGamma',2016):[f"{eosDir}/WGamma_2016_skim.root"],
-           ('ZGamma_01J_5f_lowMass',2016):[f"{eosDir}/ZGamma_01J_5f_lowMass_2016_skim_1of5.root",f"{eosDir}/ZGamma_01J_5f_lowMass_2016_skim_2of5.root",f"{eosDir}/ZGamma_01J_5f_lowMass_2016_skim_3of5.root",f"{eosDir}/ZGamma_01J_5f_lowMass_2016_skim_4of5.root",f"{eosDir}/ZGamma_01J_5f_lowMass_2016_skim_5of5.root"],
+           ('ZGamma_01J_5f_lowMass',2016):[f"{eosDir}/ZGamma_01J_5f_lowMass_2016_skim_{i}of5.root" for i in range(1,6)],
 
            ('TTWtoLNu',2016):[f"{eosDir}/TTWtoLNu_ext1_2016_skim.root",f"{eosDir}/TTWtoLNu_ext2_2016_skim.root"],
            ('TTWtoQQ',2016):[f"{eosDir}/TTWtoQQ_2016_skim.root"],
@@ -69,14 +69,17 @@ fileset = {
            ('W3jets',2016):[f"{eosDir}/W3jets_2016_skim.root",f"{eosDir}/W3jets_ext1_2016_skim.root"],
            ('W4jets',2016):[f"{eosDir}/W4jets_2016_skim.root",f"{eosDir}/W4jets_ext1_2016_skim.root",f"{eosDir}/W4jets_ext2_2016_skim.root"],
 
+           ('DYjetsM10to50',2016):[f'{eosDir}/DYjetsM10to50_2016_skim.root'],
+           ('DYjetsM50',2016):[f'{eosDir}/DYjetsM50_ext1_2016_skim_{i}of10.root' for i in range(1,11)] + [f'{eosDir}/DYjetsM50_ext2_2016_skim_{i}of10.root' for i in range(1,11)],
+
            ('VVTo2L2Nu',2016):[f"{eosDir}/VVTo2L2Nu_amcatnlo_2016_skim.root",f"{eosDir}/VVTo2L2Nu_amcatnlo_ext1_2016_skim.root"],
 
            ('WWTo4Q',2016):[f"{eosDir}/WWTo4Q_powheg_2016_skim.root"],
            ('WWToLNuQQ',2016):[f"{eosDir}/WWToLNuQQ_powheg_2016_skim.root",f"{eosDir}/WWToLNuQQ_powheg_ext1_2016_skim.root"],
 
-           ('WZTo1L1Nu2Q',2016):[f"{eosDir}/WZTo1L1Nu2Q_amcatnlo_2016_skim_1of5.root",f"{eosDir}/WZTo1L1Nu2Q_amcatnlo_2016_skim_2of5.root",f"{eosDir}/WZTo1L1Nu2Q_amcatnlo_2016_skim_3of5.root",f"{eosDir}/WZTo1L1Nu2Q_amcatnlo_2016_skim_4of5.root",f"{eosDir}/WZTo1L1Nu2Q_amcatnlo_2016_skim_5of5.root"],
+           ('WZTo1L1Nu2Q',2016):[f"{eosDir}/WZTo1L1Nu2Q_amcatnlo_2016_skim_{i}of5.root" for i in range(1,6)],
            ('WZTo1L3Nu',2016):[f"{eosDir}/WZTo1L3Nu_amcatnlo_2016_skim.root"],
-           ('WZTo2L2Q',2016):[f"{eosDir}/WZTo2L2Q_amcatnlo_2016_skim_1of10.root",f"{eosDir}/WZTo2L2Q_amcatnlo_2016_skim_2of10.root",f"{eosDir}/WZTo2L2Q_amcatnlo_2016_skim_3of10.root",f"{eosDir}/WZTo2L2Q_amcatnlo_2016_skim_4of10.root",f"{eosDir}/WZTo2L2Q_amcatnlo_2016_skim_5of10.root"],
+           ('WZTo2L2Q',2016):[f"{eosDir}/WZTo2L2Q_amcatnlo_2016_skim_{i}of10.root" for i in range(1,11)],
            ('WZTo3L1Nu',2016):[f"{eosDir}/WZTo3LNu_powheg_2016_skim.root",f"{eosDir}/WZTo3LNu_powheg_ext1_2016_skim_1of10.root",f"{eosDir}/WZTo3LNu_powheg_ext1_2016_skim_2of10.root",f"{eosDir}/WZTo3LNu_powheg_ext1_2016_skim_3of10.root",f"{eosDir}/WZTo3LNu_powheg_ext1_2016_skim_4of10.root",f"{eosDir}/WZTo3LNu_powheg_ext1_2016_skim_5of10.root"],
 
            ('ZZTo2L2Q',2016):[f"{eosDir}/ZZTo2L2Q_powheg_2016_skim.root"],

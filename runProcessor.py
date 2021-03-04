@@ -72,6 +72,7 @@ def runJob(dask=False, workers=4, memory="2GB", chunkSize=50000, maxChunks=-1, b
                  'ttbar_1l'      : ['TTbarPowheg_SingleLept'],
                  'ttbar_2l'      : ['TTbarPowheg_Dilepton'],
                  'wjets'         : ['W1jets','W2jets','W3jets','W4jets'],
+                 'zjets'         : ['DYjetsM10to50','DYjetsM50'],
                  'vgamma'        : ['WGamma','ZGamma_01J_5f_lowMass'],
                  'ttx'           : ['TTWtoLNu','TTWtoQQ','TTZtoLL','TTZtoLL_M1to10','TTZtoQQ'],
                  'singletop'     : ['ST_s_channel','ST_tW_channel','ST_tbarW_channel','ST_t_channel','ST_tbar_channel','TGJets'],
@@ -85,7 +86,7 @@ def runJob(dask=False, workers=4, memory="2GB", chunkSize=50000, maxChunks=-1, b
     fileLists['signal'] = fileLists['glugamma'] + fileLists['gluglu'] + fileLists['gammagamma']
     fileLists['ttgamma'] = fileLists['ttgamma_0l'] + fileLists['ttgamma_1l'] + fileLists['ttgamma_2l']
     fileLists['ttbar'] = fileLists['ttbar_0l'] + fileLists['ttbar_1l'] + fileLists['ttbar_2l']
-    fileLists['diboson'] = fileLists['ww'] + fileLists['wz'] + fileLists['zz']
+    fileLists['diboson'] = fileLists['ww'] + fileLists['wz'] + fileLists['zz'] + ['VVTo2L2Nu']
 
     fileLists['other'] = fileLists['diboson'] + fileLists['ttx'] + fileLists['vgamma']
     
