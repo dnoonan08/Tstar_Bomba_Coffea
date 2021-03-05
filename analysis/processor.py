@@ -6,10 +6,10 @@ import pickle
 from coffea import hist, util, processor
 from coffea.analysis_tools import PackedSelection
 
-from coffea.btag_tools import BTagScaleFactor
-from coffea.lookup_tools import extractor, dense_lookup
 from coffea.analysis_tools import Weights
-from coffea.jetmet_tools import CorrectedJetsFactory, JECStack
+#from coffea.btag_tools import BTagScaleFactor
+#from coffea.lookup_tools import extractor, dense_lookup
+#from coffea.jetmet_tools import CorrectedJetsFactory, JECStack
 
 
 from .utils.objectSelection import selectMuons, selectElectrons, selectPhotons, selectJets, selectFatJets
@@ -24,6 +24,8 @@ from .utils.ElectronScaleFactors import ElectronScaleFactors
 from .utils.MuonScaleFactors import MuonScaleFactors
 from .utils.BtagWeights import BtagWeights
 from .utils.PhotonScaleFactors import PhotonScaleFactors
+
+from .utils.JetCorrections import JetCorrections
 
 import time
 import psutil
@@ -110,6 +112,8 @@ class TstarSelector(processor.ProcessorABC):
         self.eleSF = ElectronScaleFactors()
         self.muSF  = MuonScaleFactors()
         self.phoSF = PhotonScaleFactors()
+
+        self.jetCorr = JetCorrections()
         
     @property
     def accumulator(self):
@@ -156,15 +160,36 @@ class TstarSelector(processor.ProcessorABC):
         tightMuons, looseMuons = selectMuons(events.Muon)
         tightElectrons, looseElectrons = selectElectrons(events.Electron, events.Photon)
         tightPhotons = selectPhotons(events.Photon, tightMuons, tightElectrons)
-        tightJets, btag = selectJets(events.Jet, tightMuons, tightElectrons, tightPhotons)
-        met = events.MET        
+
+        tightJets, btag, met = self.jetCorr.selectCorrectedJetMet(events, tightMuons, tightElectrons, tightPhotons, year)
+        print(tightJets.keys())
+        #for now, just keep the nominal ones:
+        tightJets = tightJets['nominal']
+        btag = btag['nominal']
+        met = met['nominal']
+
+
+        # tightJets, btag = selectJets(events.Jet, tightMuons, tightElectrons, tightPhotons)
+        # met = events.MET
+
+
 
         if not isMC:
             overlap = np.ones(len(events),dtype=bool)
         
+
+        filters = (events.Flag.BadPFMuonFilter & 
+                   events.Flag.EcalDeadCellTriggerPrimitiveFilter &
+                   events.Flag.HBHENoiseFilter & 
+                   events.Flag.HBHENoiseIsoFilter & 
+                   events.Flag.globalSuperTightHalo2016Filter & 
+                   events.Flag.goodVertices)
+        pv = events.PV
+        goodPV = ((pv.ndof>4) & ((pv.x**2 + pv.y**2)<=2) & abs(pv.z<=24))
+
         # print('after object selection :',psutil.Process().memory_info())
         #event selection
-        selection.add('overlap', overlap)
+        selection.add('overlap', overlap & filters & goodPV)
         selection.add('muTrigger', events.HLT.IsoMu24 | events.HLT.IsoTkMu24)
         selection.add('eleTrigger', events.HLT.Ele27_WPTight_Gsf)
         
