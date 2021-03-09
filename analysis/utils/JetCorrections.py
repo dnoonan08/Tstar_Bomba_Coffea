@@ -7,9 +7,6 @@ cwd = os.path.dirname(__file__)
 from coffea.lookup_tools import extractor, dense_lookup
 from coffea.jetmet_tools import CorrectedJetsFactory, JECStack
 
-from .objectSelection import selectJets
-
-
 
 class JetCorrections:
     def __init__(self):
@@ -103,7 +100,7 @@ class JetCorrections:
         # self.jet_factory[2018] = CorrectedJetsFactory(name_map, jec_stack)
 
 
-    def selectCorrectedJetMet(self, events, muons, electrons, photons, year):
+    def GetCorrectedJetMet(self, events, year):
         events["Jet","pt_raw"]=(1 - events.Jet.rawFactor)*events.Jet.pt
         events["Jet","mass_raw"]=(1 - events.Jet.rawFactor)*events.Jet.mass
         events["Jet","pt_gen"]=ak.values_astype(ak.fill_none(events.Jet.matched_gen.pt, 0), np.float32)
@@ -113,25 +110,21 @@ class JetCorrections:
         corrected_jets = self.jet_factory[year].build(events.Jet, lazy_cache=events_cache)
 
         #make dictionaries to store jet variations, btags, and met differences
-        tightJets = {}
-        btag = {}
-        met = {}
+#        jets = {'nominal': corrected_jets}
+        met = {'nominal': events.MET}
+
+        nominalJetSum = self.jetSum(corrected_jets)
 
         #get JER and JES uncertainties types
         variations = [x for x in corrected_jets.fields if x.startswith('JE')]
         
-        tightJets['nominal'], btag['nominal'] = selectJets(corrected_jets, muons, electrons, photons)
-        met['nominal'] = events.MET
-
-        nomJetSum = self.jetSum(corrected_jets)
-        
         for k in variations:
-            tightJets[f'{k}_up'], btag[f'{k}_up'] = selectJets(corrected_jets[k].up, muons, electrons, photons)
-            met[f'{k}_up'] = self.metCorrection(corrected_jets[k].up, nomJetSum, events.MET)
-            tightJets[f'{k}_down'], btag[f'{k}_down'] = selectJets(corrected_jets[k].down, muons, electrons, photons)
-            met[f'{k}_down'] = self.metCorrection(corrected_jets[k].down, nomJetSum, events.MET)
-        
-        return tightJets, btag, met
+#            jets[f'{k}_up']   = corrected_jets[k].up
+            met[f'{k}_up']    = self.metCorrection(corrected_jets[k].up, nominalJetSum, events.MET)
+#            jets[f'{k}_down'] = corrected_jets[k].down
+            met[f'{k}_down']  = self.metCorrection(corrected_jets[k].down, nominalJetSum, events.MET)
+
+        return corrected_jets, met
         
     #calculate the sum of jets, to be used for updating met pre/post jet systematic shifts
     def jetSum(self, jet):

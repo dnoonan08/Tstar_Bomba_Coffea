@@ -30,6 +30,15 @@ from .utils.JetCorrections import JetCorrections
 import time
 import psutil
 
+def bjetCut_none(array):
+    return ak.num(array)>=0
+def bjetCut_1b(array):
+    return ak.num(array)>=1
+def bjetCut_2b(array):
+    return ak.num(array)>=2
+def bjetCut_ex2b(array):
+    return ak.num(array)==2
+
 class TstarSelector(processor.ProcessorABC):
     def __init__(self,topChi2=False, tgtgChi2=False, tgtyChi2=True, mcTotals=None, bJetCut=None, mcPUDist=None):
 
@@ -115,6 +124,7 @@ class TstarSelector(processor.ProcessorABC):
 
         self.jetCorr = JetCorrections()
         
+
     @property
     def accumulator(self):
         return self._accumulator
@@ -129,20 +139,25 @@ class TstarSelector(processor.ProcessorABC):
         if 'Data_Single' in dataset:
             isMC = False
 
-        # print('processor start :',psutil.Process().memory_info())
         output = self.accumulator.identity()
 
         bjetCut='1b'
+        bjetCutFunc=bjetCut_1b
         cutList = ['overlap','lepton', 'met', '3jet', '4jet', '5jet', '1b', 'photon', 'photon100', 'photon200', 'photon300', 'photon500']
         if not self.bJetCut is None:
             goodCuts=['','1b','2b','ex2b']
             if self.bJetCut in goodCuts:
                 idx = goodCuts.index(self.bJetCut)+1
                 bjetCut = self.bJetCut
+                if bjetCut=='':     bjetCutFunc = bjetCut_none
+                if bjetCut=='1b':   bjetCutFunc = bjetCut_1b
+                if bjetCut=='2b':   bjetCutFunc = bjetCut_2b
+                if bjetCut=='ex2b': bjetCutFunc = bjetCut_ex2b
                 
                 cutList = ['overlap','lepton', 'met', '3jet', '4jet', '5jet']+ goodCuts[1:idx] + ['photon', 'photon100', 'photon200', 'photon300', 'photon500']
             
-        
+        metCut = -1
+
         selection = PackedSelection()
 
         #Calculate the maximum pdgID of any of the particles in the GenPart history
@@ -155,24 +170,37 @@ class TstarSelector(processor.ProcessorABC):
             events["GenPart","maxParent"] = ak.unflatten(maxParentFlatten, num)
             overlap = overlapFilter(dataset, events)
 
-        # print('after gen history :',psutil.Process().memory_info())
         #object selection
         tightMuons, looseMuons = selectMuons(events.Muon)
         tightElectrons, looseElectrons = selectElectrons(events.Electron, events.Photon)
         tightPhotons = selectPhotons(events.Photon, tightMuons, tightElectrons)
 
-        tightJets, btag, met = self.jetCorr.selectCorrectedJetMet(events, tightMuons, tightElectrons, tightPhotons, year)
-        print(tightJets.keys())
-        #for now, just keep the nominal ones:
-        tightJets = tightJets['nominal']
-        btag = btag['nominal']
-        met = met['nominal']
+        if isMC:
+            corr_jets, metVars = self.jetCorr.GetCorrectedJetMet(events, year)
+        else:
+            corr_jets = events.Jet
+            metVars = {'nominal':events.MET}
+        
+        tightJetVars = {}
+        btagVars = {}
 
+        btagWP = {2016: 0.6321, 2017: 0.4941, 2018: 0.4184}
+
+        tightJetVars['nominal'], btagVars['nominal'] = selectJets(corr_jets, tightMuons, tightElectrons, tightPhotons, btagWP[year])
+        jet_variations = [x for x in corr_jets.fields if x.startswith('JE')]
+        for k in jet_variations:
+            tightJetVars[f'{k}_up'], btagVars[f'{k}_up'] = selectJets(corr_jets[k].up, tightMuons, tightElectrons, tightPhotons, btagWP[year])
+            tightJetVars[f'{k}_down'], btagVars[f'{k}_down'] = selectJets(corr_jets[k].down, tightMuons, tightElectrons, tightPhotons, btagWP[year])
+
+
+
+        #for now, just keep the nominal ones:
+        tightJets = tightJetVars['nominal']
+        btag = btagVars['nominal']
+        met = metVars['nominal']
 
         # tightJets, btag = selectJets(events.Jet, tightMuons, tightElectrons, tightPhotons)
         # met = events.MET
-
-
 
         if not isMC:
             overlap = np.ones(len(events),dtype=bool)
@@ -187,7 +215,6 @@ class TstarSelector(processor.ProcessorABC):
         pv = events.PV
         goodPV = ((pv.ndof>4) & ((pv.x**2 + pv.y**2)<=2) & abs(pv.z<=24))
 
-        # print('after object selection :',psutil.Process().memory_info())
         #event selection
         selection.add('overlap', overlap & filters & goodPV)
         selection.add('muTrigger', events.HLT.IsoMu24 | events.HLT.IsoTkMu24)
@@ -225,7 +252,7 @@ class TstarSelector(processor.ProcessorABC):
         selection.add('1b',(ak.num(tightJets[btag])>=1))
         selection.add('2b',(ak.num(tightJets[btag])>=2))
         selection.add('ex2b',(ak.num(tightJets[btag])==2))
-        selection.add('met',(met.pt>-1))
+        selection.add('met',(met.pt>metCut))
         if isMC:
             selection.add('photon',   (ak.num(tightPhotons)==1))
             selection.add('photon100',(ak.num(tightPhotons)==1) & (ak.any(tightPhotons.pt>100,axis=1)))
@@ -243,9 +270,7 @@ class TstarSelector(processor.ProcessorABC):
 
         
         
-        # print('after selectors :',psutil.Process().memory_info())
-        evtSel = selection.all(*('overlap','lepton','3jet',bjetCut,'met'))
-        lepFlavor = np.zeros_like(evtSel)-1.
+        lepFlavor = np.zeros(len(events))-1.
         lepFlavor[ele_eventSelection] = 0
         lepFlavor[muon_eventSelection] = 1
 
@@ -257,17 +282,22 @@ class TstarSelector(processor.ProcessorABC):
             puWeight = getPileupReweight(events.Pileup.nTrueInt, self.mcPUDist, dataset, year)
             weightCollection.add('puWeight', weight=puWeight[0], weightUp=puWeight[1], weightDown=puWeight[2])
 
+            btagsWeight = self.bCalc.getBtagWeights(tightJets, btag, year, dataset)
+            weightCollection.add('btagSF',weight=btagsWeight[0], weightUp=btagsWeight[1], weightDown=btagsWeight[2])
+
             muWeight = self.muSF.getMuonScaleFactors(tightMuons, year, 'total')
             weightCollection.add('muSF',weight=muWeight[0], weightUp=muWeight[1], weightDown=muWeight[2])
 
             eleWeight = self.eleSF.getEleScaleFactors(tightElectrons, year, 'total')
             weightCollection.add('eleSF',weight=eleWeight[0], weightUp=eleWeight[1], weightDown=eleWeight[2])
 
-            btagsWeight = self.bCalc.getBtagWeights(tightJets, btag, year, dataset)
-            weightCollection.add('btagSF',weight=btagsWeight[0], weightUp=btagsWeight[1], weightDown=btagsWeight[2])
-
             phoWeight = self.phoSF.getPhoScaleFactors(tightPhotons, year, 'total')
             weightCollection.add('phoSF',weight=phoWeight[0], weightUp=phoWeight[1], weightDown=phoWeight[2])
+
+            weightCollection.add('btagSF',weight=np.ones(len(events)),weightUp=np.ones(len(events)),weightDown=np.ones(len(events)))
+            weightCollection.add('eleSF',weight=np.ones(len(events)),weightUp=np.ones(len(events)),weightDown=np.ones(len(events)))
+            weightCollection.add('muSF',weight=np.ones(len(events)),weightUp=np.ones(len(events)),weightDown=np.ones(len(events)))
+            weightCollection.add('phoSF',weight=np.ones(len(events)),weightUp=np.ones(len(events)),weightDown=np.ones(len(events)))
 
 
             if ak.all(ak.num(events.PSWeight)==4):
@@ -307,12 +337,6 @@ class TstarSelector(processor.ProcessorABC):
         else:
             systList=['nominal']
 
-        # print('before met :',psutil.Process().memory_info())
-        ##construct awkward array four vectors for the neutrino, with each of the hypothesis pz
-        nu_pz = MetPz(tightElectrons, tightMuons, met, solutionType=-1)
-        # print('after met :',psutil.Process().memory_info())
-
-        neutrinos = getNeutrinoArrays(nu_pz, met)
 
         tightLep = ak.with_name(ak.concatenate([tightElectrons, tightMuons], axis=1), "PtEtaPhiMCandidate")
 
@@ -326,68 +350,96 @@ class TstarSelector(processor.ProcessorABC):
             else:
                 weights[s] = weightCollection.weight(s)
 
-        # print('before chi2 :',psutil.Process().memory_info())
-        if (ak.sum(evtSel)>0) and self.topChi2:
-            sel_jets = tightJets[evtSel]
-            sel_leptons = tightLep[evtSel]
-            sel_neutrinos = neutrinos[evtSel]
-            sel_lepFlav = lepFlavor[evtSel]
+        # if (ak.sum(evtSel)>0) and self.topChi2:
+        if self.topChi2:
+            for jetK in tightJetVars:
+                _jet = tightJetVars[jetK]
+                _tag = btagVars[jetK]
+                _met = metVars[jetK]
+                evtSel = selection.all(*('overlap','lepton')) & (ak.num(_jet)>=3) & bjetCutFunc(_jet[_tag]) & (_met.pt>metCut)
 
-            chi2, topHadMass, topLepMass = chi2_Top(sel_leptons, sel_neutrinos, sel_jets, 4, btagCut=0.6321)
+                if ak.sum(evtSel)==0: continue
 
-            for syst in systList:
-                sel_weights = weights[syst][evtSel]
-                output['tt_topHadMass'].fill(dataset=dataset, lepFlavor=sel_lepFlavor, weight=sel_weights,
-                                             mass=ak.flatten(topHadMass),
-                                             systematic=syst)
+                ##construct awkward array four vectors for the neutrino, with each of the hypothesis pz
+                nu_pz = MetPz(tightElectrons, tightMuons, _met, solutionType=-1)
+                neutrinos = getNeutrinoArrays(nu_pz, _met)
 
-                output['tt_topLepMass'].fill(dataset=dataset, lepFlavor=sel_lepFlavor, weight=sel_weights,
-                                             mass=ak.flatten(topLepMass),
-                                             systematic=syst)
+                sel_jets = _jet[evtSel]
+                sel_leptons = tightLep[evtSel]
+                sel_neutrinos = neutrinos[evtSel]
+                sel_lepFlav = lepFlavor[evtSel]
 
-                output['tt_chi2'].fill(dataset=dataset, lepFlavor=sel_lepFlavor, weight=sel_weights,
-                                       chi2=ak.flatten(chi2),
-                                       systematic=syst)
+                chi2, topHadMass, topLepMass = chi2_Top(sel_leptons, sel_neutrinos, sel_jets, 4, btagCut=btagWP[year])
 
-
-        evtSelPho = selection.all(*('overlap','lepton','5jet',bjetCut,'met','photon'))
-
-        if ak.sum(evtSelPho)>0 and self.tgtyChi2:
-            N=500
-            for n in range(0,ak.sum(evtSelPho),N):
-            
-                sel_jets = tightJets[evtSelPho,:5][n:n+N]
-                sel_leptons = tightLep[evtSelPho][n:n+N]
-                sel_neutrinos = neutrinos[evtSelPho][n:n+N]
-                sel_photons = tightPhotons[evtSelPho][n:n+N]
-                sel_lepFlav = lepFlavor[evtSelPho][n:n+N]
-            
-                chi2, tStarMass, tStarHadMass, tStarLepMass, phoIsHadSide, phoPt = chi2_TT_tgty(sel_leptons, sel_neutrinos, sel_jets, sel_photons, btagCut=0.6321)
-
+                #if using nominal jet correction, loop over other systematics 
+                jetK_systList = systList if jetK is 'nominal' else ['nominal']
                 for syst in systList:
-                    sel_weights = weights[syst][evtSelPho][n:n+N]
-                    output['tgty_tstarMass'].fill(dataset=dataset, lepFlavor=sel_lepFlav, weight=sel_weights,
-                                                  mass=ak.flatten(tStarMass),
-                                                  phopt=ak.flatten(phoPt),
-                                                  systematic=syst)
+                    sel_weights = weights[syst][evtSel]
+                    output['tt_topHadMass'].fill(dataset=dataset, lepFlavor=sel_lepFlavor, weight=sel_weights,
+                                                 mass=ak.flatten(topHadMass),
+                                                 systematic=syst if jetK is 'nominal' else jetK)
 
-                    output['tgty_tstarHadMass'].fill(dataset=dataset, lepFlavor=sel_lepFlav, weight=sel_weights,
-                                                     mass=ak.flatten(tStarHadMass),
-                                                     phopt=ak.flatten(phoPt),
-                                                     systematic=syst)
+                    output['tt_topLepMass'].fill(dataset=dataset, lepFlavor=sel_lepFlavor, weight=sel_weights,
+                                                 mass=ak.flatten(topLepMass),
+                                                 systematic=syst if jetK is 'nominal' else jetK)
+                    output['tt_chi2'].fill(dataset=dataset, lepFlavor=sel_lepFlavor, weight=sel_weights,
+                                           chi2=ak.flatten(chi2),
+                                           systematic=syst if jetK is 'nominal' else jetK)
 
-                    output['tgty_tstarLepMass'].fill(dataset=dataset, lepFlavor=sel_lepFlav, weight=sel_weights,
-                                                     mass=ak.flatten(tStarLepMass),
-                                                     phopt=ak.flatten(phoPt),
-                                                     systematic=syst)
 
-                    output['tgty_chi2'].fill(dataset=dataset, lepFlavor=sel_lepFlav, weight=sel_weights,
-                                             chi2=ak.flatten(chi2),
-                                             systematic=syst)
 
-                del chi2, tStarMass, tStarHadMass, tStarLepMass, phoIsHadSide, phoPt
+        # evtSelPho = selection.all(*('overlap','lepton','5jet',bjetCut,'met','photon'))
+        # if ak.sum(evtSelPho)>0 and self.tgtyChi2:
 
-        # print('after chi2 :',psutil.Process().memory_info())
+        if self.tgtyChi2:
+            for jetK in tightJetVars:
+                _jet = tightJetVars[jetK]
+                _tag = btagVars[jetK]
+                _met = metVars[jetK]
+                evtSelPho = selection.all(*('overlap','lepton','photon')) & (ak.num(_jet)>=5) & bjetCutFunc(_jet[_tag]) & (_met.pt>metCut)
+                
+                if ak.sum(evtSelPho)==0: continue
+
+                ##construct awkward array four vectors for the neutrino, with each of the hypothesis pz
+                nu_pz = MetPz(tightElectrons, tightMuons, _met, solutionType=-1)
+                neutrinos = getNeutrinoArrays(nu_pz, _met)
+
+                N=500
+                for n in range(0,ak.sum(evtSelPho),N):
+            
+                    sel_jets = _jet[evtSelPho,:5][n:n+N]
+                    sel_leptons = tightLep[evtSelPho][n:n+N]
+                    sel_neutrinos = neutrinos[evtSelPho][n:n+N]
+                    sel_photons = tightPhotons[evtSelPho][n:n+N]
+                    sel_lepFlav = lepFlavor[evtSelPho][n:n+N]
+            
+                    chi2, tStarMass, tStarHadMass, tStarLepMass, phoIsHadSide, phoPt = chi2_TT_tgty(sel_leptons, sel_neutrinos, sel_jets, sel_photons, btagCut=btagWP[year])
+
+                    #if using nominal jet correction, loop over other systematics 
+                    jetK_systList = systList if jetK is 'nominal' else ['nominal']
+                    for syst in systList:
+                        sel_weights = weights[syst][evtSelPho][n:n+N]
+                        output['tgty_tstarMass'].fill(dataset=dataset, lepFlavor=sel_lepFlav, weight=sel_weights,
+                                                      mass=ak.flatten(tStarMass),
+                                                      phopt=ak.flatten(phoPt),
+                                                      systematic=syst if jetK is 'nominal' else jetK)
+
+                        output['tgty_tstarHadMass'].fill(dataset=dataset, lepFlavor=sel_lepFlav, weight=sel_weights,
+                                                         mass=ak.flatten(tStarHadMass),
+                                                         phopt=ak.flatten(phoPt),
+                                                         systematic=syst if jetK is 'nominal' else jetK)
+
+                        output['tgty_tstarLepMass'].fill(dataset=dataset, lepFlavor=sel_lepFlav, weight=sel_weights,
+                                                         mass=ak.flatten(tStarLepMass),
+                                                         phopt=ak.flatten(phoPt),
+                                                         systematic=syst if jetK is 'nominal' else jetK)
+
+                        output['tgty_chi2'].fill(dataset=dataset, lepFlavor=sel_lepFlav, weight=sel_weights,
+                                                 chi2=ak.flatten(chi2),
+                                                 systematic=syst if jetK is 'nominal' else jetK)
+
+                    del chi2, tStarMass, tStarHadMass, tStarLepMass, phoIsHadSide, phoPt
+
         for syst in systList:
             evtPreSel = selection.all(*('overlap','lepton','met'))
             output['nJet'].fill(dataset=dataset, lepFlavor=lepFlavor[evtPreSel], weight=weights[syst][evtPreSel],
@@ -496,8 +548,6 @@ class TstarSelector(processor.ProcessorABC):
         #     cutMask = selection.all(*cutList[:i+1]) & muon_eventSelection
         #     print(cut, ak.sum(cutMask))
             
-        # print(len(pickle.dumps(output)))
-        # print('processor end :',psutil.Process().memory_info())
         return output
 
     def postprocess(self, accumulator):

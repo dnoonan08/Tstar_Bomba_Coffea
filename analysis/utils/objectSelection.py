@@ -78,7 +78,7 @@ def selectPhotons(photons, muons, electrons):
     return photons[photonSelect]
 
 
-def selectJets(jets, muons, electrons, photons):
+def selectJets(jets, muons, electrons, photons, bTagWP):
     # ##check dR jet,lepton & jet,photon
     jetMu, jetMuDR = jets.nearest(muons, return_metric=True)
     jetMuMask = ak.fill_none(jetMuDR > 0.4, True)
@@ -95,7 +95,6 @@ def selectJets(jets, muons, electrons, photons):
               (jets.isLoose) 
              )
 
-    bTagWP = 0.6321
     btagged = jets[jetSel].btagDeepB>bTagWP  
     
     return jets[jetSel], btagged
