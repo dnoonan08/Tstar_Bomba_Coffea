@@ -18,6 +18,7 @@ def fix_uproot():
     import uproot
     uproot.open.defaults["xrootd_handler"] = uproot.source.xrootd.MultithreadedXRootDSource
 
+import psutil
 
 #the NanoAODSchema needs to be adjusted, to remove cross references to FSRPhotons
 class SkimmedSchema(NanoAODSchema):
@@ -29,6 +30,7 @@ class SkimmedSchema(NanoAODSchema):
 
 
 def runJob(dask=False, workers=4, memory="2GB", chunkSize=50000, maxChunks=-1, bJetCut='1b', dataset='small', year=2016, maxFiles=None):
+
     if dask:
         from dask.distributed import Client
         from lpc_dask import HTCondorCluster
@@ -85,10 +87,10 @@ def runJob(dask=False, workers=4, memory="2GB", chunkSize=50000, maxChunks=-1, b
 
     fileLists['signal'] = fileLists['glugamma'] + fileLists['gluglu'] + fileLists['gammagamma']
     fileLists['ttgamma'] = fileLists['ttgamma_0l'] + fileLists['ttgamma_1l'] + fileLists['ttgamma_2l']
-    fileLists['ttbar'] = fileLists['ttbar_0l'] + fileLists['ttbar_1l'] + fileLists['ttbar_2l']
+
     fileLists['diboson'] = fileLists['ww'] + fileLists['wz'] + fileLists['zz'] + ['VVTo2L2Nu']
 
-    fileLists['other'] = fileLists['diboson'] + fileLists['ttx'] + fileLists['vgamma']
+    fileLists['other'] = fileLists['diboson'] + fileLists['ttx'] + fileLists['vgamma'] + fileLists['ttbar_0l']
     
     fileLists['fullmc']   = [k[0] for k in filesetFull.keys()]
 
@@ -119,23 +121,12 @@ def runJob(dask=False, workers=4, memory="2GB", chunkSize=50000, maxChunks=-1, b
             flist = fileLists[dataset.lower()]
         fileset = {k:filesetDataFull[k][:maxFiles] for k in filesetDataFull if (k[0] in flist and k[1]==year)}
 
-    if isData:
-        nEvents = None
-        mcPUDist = None
-    else:
-        nEvents = {}
-        mcPUDist = {}
-        for d in fileset:
-            if not d in nEvents:
-                nEvents[d] = 0
-                for fName in fileset[d]:
-                    with uproot.open(fName)['hEvents'] as hEvents:
-                        nEvents[d] += hEvents.values()[1]
-                        with uproot.open(fName)['hPUTrue'] as hPUTrue:
-                            if not d in mcPUDist:
-                                mcPUDist[d] = hPUTrue.values()
-                            else:
-                                mcPUDist[d] += hPUTrue.values()
+    nEvents = None
+    mcPUDist = None
+
+    if not isData:
+        nEvents = util.load('analysis/utils/MCEventCounts.coffea')
+        mcPUDist = util.load('analysis/utils/MCPileupDists.coffea')
 
     proc = TstarSelector(mcTotals=nEvents, mcPUDist=mcPUDist, bJetCut=bJetCut)
 

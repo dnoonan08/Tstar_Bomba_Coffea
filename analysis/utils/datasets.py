@@ -79,7 +79,7 @@ fileset = {
 
            ('WZTo1L1Nu2Q',2016):[f"{eosDir}/WZTo1L1Nu2Q_amcatnlo_2016_skim_{i}of5.root" for i in range(1,6)],
            ('WZTo1L3Nu',2016):[f"{eosDir}/WZTo1L3Nu_amcatnlo_2016_skim.root"],
-           ('WZTo2L2Q',2016):[f"{eosDir}/WZTo2L2Q_amcatnlo_2016_skim_{i}of10.root" for i in range(1,11)],
+           ('WZTo2L2Q',2016):[f"{eosDir}/WZTo2L2Q_amcatnlo_2016_skim_{i}of10.root" for i in range(1,6)],
            ('WZTo3L1Nu',2016):[f"{eosDir}/WZTo3LNu_powheg_2016_skim.root",f"{eosDir}/WZTo3LNu_powheg_ext1_2016_skim_1of10.root",f"{eosDir}/WZTo3LNu_powheg_ext1_2016_skim_2of10.root",f"{eosDir}/WZTo3LNu_powheg_ext1_2016_skim_3of10.root",f"{eosDir}/WZTo3LNu_powheg_ext1_2016_skim_4of10.root",f"{eosDir}/WZTo3LNu_powheg_ext1_2016_skim_5of10.root"],
 
            ('ZZTo2L2Q',2016):[f"{eosDir}/ZZTo2L2Q_powheg_2016_skim.root"],
@@ -104,3 +104,31 @@ filesetData = {
     ('Data_SingleMu_g', 2016)  : [f'{eosDir}/Data_SingleMu_g_2016_skim_{i}of10.root'  for i in range(1,11)],
     ('Data_SingleMu_h', 2016)  : [f'{eosDir}/Data_SingleMu_h_2016_skim_{i}of10.root'  for i in range(1,11)],
 }
+
+def updateDatasetInfo():
+    nEvents = {}
+    mcPUDist = {}
+    import uproot
+    for d in fileset:
+        if not d in nEvents:
+            nEvents[d] = 0
+        for fName in fileset[d]:
+            with uproot.open(fName) as _file:
+                with _file['hEvents'] as hEvents:
+                    nEvents[d] += hEvents.values()[1]
+                with _file['hPUTrue'] as hPUTrue:
+                    if not d in mcPUDist:
+                        mcPUDist[d] = hPUTrue.values()
+                    else:
+                        mcPUDist[d] += hPUTrue.values()
+
+    from coffea import util
+    import os.path
+    cwd = os.path.dirname(__file__)
+
+    util.save(nEvents,f'{cwd}/MCEventCounts.coffea')
+    util.save(mcPUDist,f'{cwd}/MCPileupDists.coffea')
+
+
+if __name__=="__main__":
+    updateDatasetInfo()
