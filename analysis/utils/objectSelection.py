@@ -17,6 +17,23 @@ def selectMuons(muons):
     return muons[muonSelectTight], muons[muonSelectLoose]        
 
 
+def selectMuonsMiniIso(muons):
+    muonSelectTight = ((muons.pt>=55) & 
+                       (abs(muons.eta)<=2.4) & 
+                       (muons.tightId) & 
+                       (muons.miniPFRelIso_all < 0.1)
+                      )
+
+    muonSelectLoose = ((muons.pt>=30) & 
+                       (abs(muons.eta)<=2.4) & 
+                       ((muons.isPFcand) & (muons.isTracker | muons.isGlobal)) & 
+                       (muons.miniPFRelIso_all < 0.4) &
+                       ~muonSelectTight
+                      )
+
+    return muons[muonSelectTight], muons[muonSelectLoose]        
+
+
 
 def selectElectrons(electrons, photons):
     #define electron cuts
@@ -58,7 +75,65 @@ def selectElectrons(electrons, photons):
                           )
 
     return electrons[electronSelectTight], electrons[electronSelectLoose]
-        
+
+def selectElectronsPFIso(electrons, photons):
+    #define electron cuts
+    scEta = electrons.eta + electrons.deltaEtaSC
+    eleEtaGap = (abs(scEta) < 1.4442) | (abs(scEta) > 1.566)
+    elePassDXY = ((abs(electrons.eta) < 1.479) & (abs(electrons.dxy) < 0.05) |
+                 (abs(electrons.eta) > 1.479)  & (abs(electrons.dxy) < 0.1)
+                )
+    elePassDZ = ((abs(electrons.eta) < 1.479) & (abs(electrons.dz) < 0.1) |
+                 (abs(electrons.eta) > 1.479)  & (abs(electrons.dz) < 0.2)
+                )
+
+    electronSelectTight = ((electrons.pt>=35) & 
+                           (abs(electrons.eta)<=2.4) & 
+                           eleEtaGap &      
+                           electrons.isTight &
+                           elePassDXY & 
+                           elePassDZ
+                          )
+
+    electronSelectLoose = ((electrons.pt>=15) & 
+                           (abs(electrons.eta)<=2.4) & 
+                           eleEtaGap &      
+                           electrons.isVeto &
+                           elePassDXY & 
+                           elePassDZ & 
+                           ~electronSelectTight
+                          )
+
+    return electrons[electronSelectTight], electrons[electronSelectLoose]
+
+def selectElectronsMiniIso(electrons, photons):
+    #define electron cuts
+    scEta = electrons.eta + electrons.deltaEtaSC
+    eleEtaGap = (abs(scEta) < 1.4442) | (abs(scEta) > 1.566)
+    elePassDXY = ((abs(electrons.eta) < 1.479) & (abs(electrons.dxy) < 0.05) |
+                 (abs(electrons.eta) > 1.479)  & (abs(electrons.dxy) < 0.1)
+                )
+    elePassDZ = ((abs(electrons.eta) < 1.479) & (abs(electrons.dz) < 0.1) |
+                 (abs(electrons.eta) > 1.479)  & (abs(electrons.dz) < 0.2)
+                )
+
+    electronSelectTight = ((electrons.pt>=50) & 
+                           (abs(electrons.eta)<=2.2) & 
+                           eleEtaGap &      
+                           electrons.mvaFall17V2noIso_WP90 & 
+                           (electrons.miniPFRelIso_all < 0.1)
+                          )
+
+    electronSelectLoose = ((electrons.pt>=35) & 
+                           (abs(electrons.eta)<=2.2) & 
+                           eleEtaGap &      
+                           electrons.mvaFall17V2noIso_WPL &
+                           ~electrons.mvaFall17V2noIso_WPL & 
+                           (electrons.miniPFRelIso_all < 0.4)
+
+                          )
+
+    return electrons[electronSelectTight], electrons[electronSelectLoose]
 
 def selectPhotons(photons, muons, electrons):
     phoMu, phoMuDR  = photons.nearest(muons,return_metric=True)
